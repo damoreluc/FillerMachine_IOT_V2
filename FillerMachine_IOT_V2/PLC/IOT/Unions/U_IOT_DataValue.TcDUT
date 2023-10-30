@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="U_IOT_DataValue" Id="{8a6e22b1-b7f7-467b-9094-daa28db74856}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// Questa unione contiene il valore del dato. L'utilizzo dell'unione permette
+// di avere una struttura dato (ST_IOT_Data) generica evitando di preoccuparsi 
+// di quale sia il tipo di dato contenuto se non quando si va effettivamente 
+// a leggerlo o scriverlo.
+// La quantità di memoria occupata da una union corrisponde alla quantita di 
+// memoria necessaria a contenere l'elemento della union che da dimensione
+// maggiore.
+// In sostanza i vari elementi di una union condividono la stessa area di
+// memoria e usarne uno piuttosto di un altro non modifica il contenuto della
+// memoria stessa quanto la sua rappresentazione.
+
+TYPE U_IOT_DataValue :
+UNION
+	b : BOOL;
+	n : DINT;
+	f : LREAL;
+END_UNION
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

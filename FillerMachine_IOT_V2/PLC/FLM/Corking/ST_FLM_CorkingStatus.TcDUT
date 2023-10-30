@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_FLM_CorkingStatus" Id="{9cb2d765-ccad-46e2-aa72-54b46dabe8e4}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+TYPE ST_FLM_CorkingStatus :
+STRUCT
+	eStep : E_FLM_CorkingStep;				// passo della macchina a stati
+	stRstep : STRING;						// passo come stringa
+	tStepTime : TIME;						// tempo di permanenza nello stato
+	eErrorStep : E_FLM_CorkingStep;			// stato in cui si è generato l'errore
+	nErrorID : UDINT;						// id errore
+END_STRUCT	
+END_TYPE
+
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

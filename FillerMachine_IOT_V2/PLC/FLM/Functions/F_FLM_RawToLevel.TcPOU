@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="F_FLM_RawToLevel" Id="{ce225d20-4799-4052-92e1-3eea96198dee}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+FUNCTION F_FLM_RawToLevel : REAL
+VAR_INPUT
+	nRaw : INT;			// valore letto dagli ingressi	
+	rMaxLevel : REAL;
+END_VAR
+VAR_OUTPUT
+    fLevel : REAL;		// [mm]	Livello
+END_VAR
+VAR
+	
+END_VAR
+VAR CONSTANT
+	cMAXRAW : INT := 2#0111_1111_1111_1111;	// massimo valore ingresso analogico
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+F_FLM_RawToLevel := (TO_REAL(nRaw) / TO_REAL(cMAXRAW)) * rMaxLevel; 
+
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="F_FLM_RawToLevel">
+      <LineId Id="99" Count="2" />
+      <LineId Id="97" Count="0" />
+      <LineId Id="102" Count="1" />
+      <LineId Id="98" Count="0" />
+      <LineId Id="122" Count="1" />
+      <LineId Id="7" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,113 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="PLC_MAIN" Id="{97e09f56-a846-45b7-b746-7c26db2ee647}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+PROGRAM PLC_MAIN
+VAR
+	bInitialized : BOOL;
+	
+	fbGetCurTaskIndex : GETCURTASKINDEX;		
+	tTaskCycleTime : UDINT;					// tempo di ciclo della task in microsecondi
+	tTaskExecTime : UDINT;					// tempo di esecuzione della task in microsecondi
+	tTaskMaxExecTime : UDINT;				// tempo massimo di esecuzione della task in microsecondi
+
+	fbFlm : FB_FLM_Main;
+	
+	
+	// fbTest : FB_FLM_CorkingStateMachine;
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+IF NOT bInitialized THEN
+	
+	// Get the Cycle Time of the task to which this PRG is assigned (it will then be shared with the State Machine)
+	fbGetCurTaskIndex();
+	tTaskCycleTime := _TaskInfo[fbGetCurTaskIndex.index].CycleTime / 10;	// CycleTime is expressed in multiples of 100ns
+	bInitialized := GVL_SIMU.bTaskRunning;
+	
+ELSE
+	
+	(* task time *)
+	tTaskExecTime := _TaskInfo[fbGetCurTaskIndex.index].LastExecTime / 10;		// ExecTime is expressed in multiples of 100ns
+	IF tTaskExecTime > tTaskMaxExecTime THEN
+			tTaskMaxExecTime := tTaskExecTime;
+	END_IF;	
+	
+	(* machine *)
+		
+	fbFlm(
+		bEnable:= TRUE, 
+		tTaskCycleTime:= tTaskCycleTime, 
+		nId:= 0, 
+		bHwError:= FALSE,	
+		stRawIn := GVL_PLC.stFlmRawIn,
+		stIn := GVL_PLC.stFlmIn,
+		stRawOut := GVL_PLC.stFlmRawOut,
+		stOut := GVL_PLC.stFlmOut,
+		stCtrl := GVL_PLC.stFlmCtrl,		
+		stParams := GVL_PLC.stFlmParams,
+		stDiagnostic := GVL_PLC.stFlmDiagnostic,
+		stStatus := GVL_PLC.stFlmStatus,
+		stStatusSaved := GVL_PLC.stFlmStatusSaved,
+		stMotion := GVL_PLC.stFlmMotion,
+		stIotCmd := GVL_IOT.stFlmCmd	 
+	);
+		
+	
+		
+	(* 
+	fbTest(
+		bEnable:= TRUE, 
+		bAck:= GVL_PLC.stFlmIn.bAckButton, 
+		bStart:= GVL_PLC.stFlmIn.bStartButton, 
+		bStop:= GVL_PLC.stFlmIn.bStopButton, 
+		bRotationLimitSwitch:= GVL_PLC.stFlmIn.bCorkingRotationLimitSwitch, 
+		stParams:= GVL_PLC.stFlmParams.stCorking, 
+	);
+	*)
+	
+	GVL_PLC.bTaskRunning := TRUE;
+END_IF
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="PLC_MAIN">
+      <LineId Id="27" Count="2" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="122" Count="5" />
+      <LineId Id="129" Count="1" />
+      <LineId Id="121" Count="0" />
+      <LineId Id="142" Count="1" />
+      <LineId Id="146" Count="1" />
+      <LineId Id="150" Count="0" />
+      <LineId Id="149" Count="0" />
+      <LineId Id="151" Count="0" />
+      <LineId Id="145" Count="0" />
+      <LineId Id="208" Count="0" />
+      <LineId Id="92" Count="4" />
+      <LineId Id="179" Count="8" />
+      <LineId Id="168" Count="0" />
+      <LineId Id="276" Count="0" />
+      <LineId Id="91" Count="0" />
+      <LineId Id="189" Count="0" />
+      <LineId Id="38" Count="0" />
+      <LineId Id="221" Count="0" />
+      <LineId Id="225" Count="8" />
+      <LineId Id="223" Count="0" />
+      <LineId Id="297" Count="1" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="255" Count="0" />
+      <LineId Id="254" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

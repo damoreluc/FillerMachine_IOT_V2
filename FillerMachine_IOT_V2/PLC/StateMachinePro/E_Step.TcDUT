@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="E_Step" Id="{d7937598-53d8-429d-a2a0-ceb33f880c1f}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+{attribute 'to_string'}
+
+TYPE E_Step :
+(
+	(* special steps *)
+	NoStep := -32767,		// nessuno step
+	Unknown := -32000,		// step sconosciuto
+	
+	(* Not Enabled or Errors*)
+	NeOrError := -990,			// non abilitata o in errore
+
+	(* Stop *)
+	Stop := 0,				// stop
+	
+	(* Preparation *)
+	Feeding := 110,			// avanzamento
+	WaterFilling := 120,	// riempimento acqua
+	MintFilling := 130,		// riempimento menta
+	Waiting1 := 140,		// attesa 1
+	Corking := 150,			// tappatura
+	Waiting2 := 160,		// attesa 2
+		
+	(* Stopping *)
+	Stopping := 900
+	
+);
+END_TYPE
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_FLM_Motion" Id="{f2a7bf69-1624-4d1a-ae7e-4a3d14602e90}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+TYPE ST_FLM_Motion :
+STRUCT
+	// stVAxisMaster : AXIS_REF;
+	// stAxis1 : AXIS_REF;
+	// stAxis2 : AXIS_REF;
+END_STRUCT
+END_TYPE
+
+
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

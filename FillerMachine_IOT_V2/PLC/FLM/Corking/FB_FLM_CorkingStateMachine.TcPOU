@@ -1,0 +1,349 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_FLM_CorkingStateMachine" Id="{fb80c8dd-8011-4d56-ae90-9caca8a3b491}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+FUNCTION_BLOCK FB_FLM_CorkingStateMachine
+VAR_INPUT
+	bEnable : BOOL;
+	bAck : BOOL;
+	bStart : BOOL;
+	bStop : BOOL;
+	bRotationLimitSwitch : BOOL;
+	stParams : ST_FLM_CorkingParams;
+END_VAR
+
+VAR_IN_OUT	
+	
+END_VAR
+
+VAR_OUTPUT
+	eStep :  E_FLM_CorkingStep;
+	tStepTime :  TIME;
+	eErrStep :  E_FLM_CorkingStep;
+	nErrID : UDINT;
+	bErr : BOOL;
+	bVertical : BOOL;
+	bRotation : BOOL;
+END_VAR
+
+VAR
+	bInitialized :  BOOL;
+	eNewstep :   E_FLM_CorkingStep;
+	bEntryact :  BOOL;
+	fbTonStep :  TON;
+	ui : UINT;	
+	
+	fbRtStart : R_TRIG;
+	fbRtStop : R_TRIG;
+	bStopRequest : BOOL;
+	fbRotation : FB_CorkingRotation;
+	
+	bRotationExecute : BOOL;	
+	
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+IF NOT bInitialized THEN
+	eNewstep :=  E_FLM_CorkingStep.NoStep;
+	eStep :=  E_FLM_CorkingStep.Stop;
+	bEntryact := FALSE;
+	bInitialized := TRUE;	
+	bErr := FALSE;
+	eErrStep :=  E_FLM_CorkingStep.NoStep;	
+	nErrID := 0;	
+ELSE	
+	
+	(* fronti *)
+	fbRtStart(CLK:= bStart);
+	fbRtStop(CLK:= bStop);	
+	
+	(* richieste *)
+	IF fbRtStop.Q THEN
+		bStopRequest := TRUE;
+	END_IF; 
+
+	(* disabilitata o avaria *)
+	IF NOT bEnable THEN
+		eNewstep := E_FLM_CorkingStep.NeOrError;
+	END_IF;
+	
+	IF eNewstep <>  E_FLM_CorkingStep.NoStep THEN
+		eStep := eNewstep;
+		eNewstep :=  E_FLM_CorkingStep.NoStep;
+		bEntryact := FALSE;
+	END_IF;
+
+	CASE eStep OF
+		(* not Enabled *)
+		 E_FLM_CorkingStep.NeOrError :
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bErr := TRUE;
+			
+			bVertical := FALSE;
+			bRotation := FALSE;			
+			bRotationExecute := FALSE;			
+					
+			(* transition *)
+			IF bAck THEN
+				eNewstep :=  E_FLM_CorkingStep.Reset;								
+			END_IF;
+
+			(* exitact *)
+			IF eNewstep <>  E_FLM_CorkingStep.NoStep THEN
+				nErrID := 0;
+				eErrStep := E_FLM_CorkingStep.NoStep;			
+			END_IF;	
+
+		(* Reset *)
+		E_FLM_CorkingStep.Reset :
+			(* entry action *)
+			IF NOT bEntryact THEN				
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bErr := FALSE;
+			
+			bVertical := FALSE;
+			bRotation := FALSE;			
+			bRotationExecute := FALSE;			
+					
+			(* transition *)
+			IF TRUE THEN
+				eNewstep :=  E_FLM_CorkingStep.Stop;
+			END_IF
+						
+			(* exitact *)
+			IF eNewstep <>  E_FLM_CorkingStep.NoStep THEN
+				;			
+			END_IF;
+		
+		(* Stop *)
+		E_FLM_CorkingStep.Stop:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bStopRequest := FALSE;
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bErr := FALSE;
+			
+			bVertical := FALSE;
+			bRotation := FALSE;			
+			bRotationExecute := FALSE;				
+							
+			(* transition *)
+			IF tStepTime > T#1S THEN
+				eNewstep :=  E_FLM_CorkingStep.Ready;
+			END_IF;
+
+			(* exitact *)
+			IF eNewstep <>  E_FLM_CorkingStep.NoStep THEN
+				;
+			END_IF;
+		
+		(* Ready *)
+		E_FLM_CorkingStep.Ready:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bErr := FALSE;
+			
+			bVertical := FALSE;
+			bRotation := FALSE;			
+			bRotationExecute := FALSE;					
+							
+			(* transition *)
+			IF NOT bStopRequest THEN
+				IF NOT bStop AND fbRtStart.Q THEN
+					eNewstep :=  E_FLM_CorkingStep.Down;			
+				END_IF;
+			ELSE
+				eNewstep :=  E_FLM_CorkingStep.Stop;
+			END_IF
+
+			(* exitact *)
+			IF eNewstep <>  E_FLM_CorkingStep.NoStep THEN
+				;
+			END_IF;
+						
+		(* Down *)
+		E_FLM_CorkingStep.Down:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bErr := FALSE;
+			
+			bVertical := TRUE;
+			bRotation := FALSE;			
+			bRotationExecute := FALSE;					
+							
+			(* transition *)
+			IF NOT bStop THEN
+				IF tstepTime >= stParams.tDown THEN
+					eNewstep :=  E_FLM_CorkingStep.Rotation;			
+				END_IF;
+			ELSE
+				eNewstep :=  E_FLM_CorkingStep.Stop;
+			END_IF
+
+			(* exitact *)
+			IF eNewstep <>  E_FLM_CorkingStep.NoStep THEN
+				;
+			END_IF;
+			
+		(* Rotation *)
+		E_FLM_CorkingStep.Rotation:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bErr := FALSE;
+			
+			bVertical := TRUE;
+			bRotation := fbRotation.bRotation;			
+			bRotationExecute := TRUE;					
+							
+			(* transition *)
+			IF fbRotation.bError THEN
+				eNewstep :=  E_FLM_CorkingStep.NeOrError;
+			ELSE
+				IF fbRotation.bDone THEN
+					eNewstep :=  E_FLM_CorkingStep.Up;
+				END_IF;			
+			END_IF;
+
+			(* exitact *)
+			IF eNewstep <>  E_FLM_CorkingStep.NoStep THEN
+				IF eNewstep = E_FLM_CorkingStep.NeOrError THEN
+					eErrStep := E_FLM_CorkingStep.Rotation;
+					nErrID := fbRotation.nErrId;
+				END_IF
+			END_IF;
+			
+		(* Up *)
+		E_FLM_CorkingStep.Up:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bErr := FALSE;
+			
+			bVertical := TRUE;
+			bRotation := FALSE;			
+			bRotationExecute := FALSE;					
+							
+			(* transition *)
+			IF tStepTime >= stParams.tUp THEN
+				eNewstep :=  E_FLM_CorkingStep.Done;			
+			END_IF;
+
+			(* exitact *)
+			IF eNewstep <>  E_FLM_CorkingStep.NoStep THEN
+				;
+			END_IF;
+			
+		(* Done *)
+		E_FLM_CorkingStep.Done:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bErr := FALSE;
+			
+			bVertical := FALSE;
+			bRotation := FALSE;			
+			bRotationExecute := FALSE;					
+							
+			(* transition *)
+			IF TRUE THEN
+				eNewstep :=  E_FLM_CorkingStep.Ready;			
+			END_IF;
+
+			(* exitact *)
+			IF eNewstep <>  E_FLM_CorkingStep.NoStep THEN
+				;
+			END_IF;			
+					
+		(* Stopping *)
+		E_FLM_CorkingStep.Stopping:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bErr := FALSE;
+			
+			bVertical := FALSE;
+			bRotation := FALSE;			
+			bRotationExecute := FALSE;					
+							
+			(* transition *)
+			IF TRUE THEN
+				eNewstep :=  E_FLM_CorkingStep.Down;			
+			END_IF;
+
+			(* exitact *)
+			IF eNewstep <>  E_FLM_CorkingStep.NoStep THEN
+				;
+			END_IF;	
+		ELSE
+			eNewstep :=  E_FLM_CorkingStep.NeOrError;
+			eErrStep :=  E_FLM_CorkingStep.Unknown;			
+			nErrID := 16#9999_9999;
+	END_CASE
+	
+	(* call FBs *)	
+	fbRotation(
+		bExecute:= bRotationExecute, 
+		bLimitSwitch:= bRotationLimitSwitch,	 
+	);
+	
+	(* tempo di permanenza nello step *)
+	fbTonStep(IN := (eNewstep =  E_FLM_CorkingStep.NoStep), PT := T#500H);
+	tStepTime := fbTonStep.ET;
+	
+END_IF;
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_FLM_CorkingStateMachine">
+      <LineId Id="40492" Count="57" />
+      <LineId Id="40777" Count="0" />
+      <LineId Id="40550" Count="5" />
+      <LineId Id="40558" Count="218" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="40824" Count="0" />
+      <LineId Id="40823" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

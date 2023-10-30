@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <GVL Name="GVL_PLC" Id="{170d70cb-a831-40da-b9c1-557d2d290e9b}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+{attribute 'qualified_only'}
+VAR_GLOBAL PERSISTENT	
+	stFlmParams : ST_FLM_Params;
+	stFlmStatusSaved : ST_FLM_StatusSaved;	
+END_VAR
+
+VAR_GLOBAL
+	bTaskRunning : BOOL;
+
+	stFlmDiagnostic	: ST_Diagnostic;
+
+	stFlmIn : ST_FLM_In;
+	stFlmRawIn : ST_FLM_RawIn;
+	stFlmOut : ST_FLM_Out;
+	stFlmRawOut : ST_FLM_RawOut;
+	stFlmCtrl : ST_FLM_Ctrl;	
+	stFlmStatus : ST_FLM_Status;
+	stFlmMotion	: ST_FLM_Motion;
+
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

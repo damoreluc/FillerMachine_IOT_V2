@@ -1,0 +1,83 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_CorkingRotation" Id="{8583df25-4107-4e91-a9c0-f76aea7f674c}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+FUNCTION_BLOCK FB_CorkingRotation
+VAR_INPUT
+	bExecute : BOOL;
+	bLimitSwitch : BOOL;
+END_VAR
+VAR_OUTPUT
+	bRotation : BOOL; 
+	bDone : BOOL;
+	bError : BOOL;
+	nErrId : UDINT;
+END_VAR
+VAR
+	nCnt : UDINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+IF bExecute THEN
+	nCnt := nCnt + 1;
+	bRotation := (nCnt >= 1 AND nCnt < 100) OR
+				(nCnt >= 201 AND nCnt < 300) OR
+				(nCnt >= 401 AND nCnt < 500) OR
+				(nCnt >= 601 AND nCnt < 700) OR
+				(nCnt >= 800 AND nCnt < 1000);
+	IF nCnt >= 1000 THEN
+		IF bLimitSwitch THEN
+			bDone := TRUE;
+			bError := FALSE;
+			nErrId := 0;
+		ELSE
+			bDone := FALSE;
+			bError := 1;
+			nErrId := 16#9999_0001;
+		END_IF			
+	END_IF
+ELSE
+	bError := FALSE;
+	bRotation := FALSE;
+	nCnt := 0;
+	bDone := FALSE;
+END_IF
+
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_CorkingRotation">
+      <LineId Id="56" Count="4" />
+      <LineId Id="20" Count="1" />
+      <LineId Id="43" Count="1" />
+      <LineId Id="46" Count="2" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="31" Count="1" />
+      <LineId Id="34" Count="1" />
+      <LineId Id="37" Count="1" />
+      <LineId Id="36" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="82" Count="1" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="17" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_FLM_RawOut" Id="{e899aee6-884b-47e7-8da1-54ff987c721b}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+TYPE ST_FLM_RawOut :
+STRUCT
+	bConveyor  AT %Q* : BOOL;			// nastro trasportatore
+	bWater  AT %Q* : BOOL;				// riempimento acqua
+	bMint : BOOL;				// riempimento menta	
+	bYellow : BOOL;				// luce gialla
+	bGreen : BOOL;				// luce verde
+	bHorn : BOOL;				// sirena di segnalazione
+	bCorkingVertical : BOOL;	// inserimento del tappo - movimento verticale
+	bCorkingRotation : BOOL;	// inserimento del tappo - rotazione
+END_STRUCT
+END_TYPE
+
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

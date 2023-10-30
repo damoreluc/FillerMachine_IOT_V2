@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_IOT_Data" Id="{f27e5889-2a00-463a-83f7-7a031be90301}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// Questa struttura definisce il dato da pubblicare sul broker
+// Ad ogni dato viene associato un subtopic specifico
+
+TYPE ST_IOT_Data :
+STRUCT
+	sSubtopic : STRING;				// subtopic dove il valore verra scritto
+	eType : E_IOT_DataType;			// tipologia del dato (DINT, LREAL, BOOL)
+	uValue : U_IOT_DataValue;		// unione in cui viene letto/scritto il valore	
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

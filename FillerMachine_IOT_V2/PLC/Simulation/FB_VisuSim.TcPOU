@@ -1,0 +1,176 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_VisuSim" Id="{3774dbef-c7d2-4a4d-811e-1fba5257b332}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+FUNCTION_BLOCK FB_VisuSim
+VAR_INPUT
+	bConveyor : BOOL;
+	bWater : BOOL;
+	bMint : BOOL;
+	bCorkingRotation : BOOL;
+	bCokingVertical : BOOL;
+	bRefillWater : BOOL;
+	bRefillMint : BOOL;
+	bEmergencyButton : BOOL;
+END_VAR
+VAR_OUTPUT
+	fPos : REAL;	
+	bBottle : BOOL;
+	nWaterLevel : INT;
+	nMintLevel : INT;
+	bCorkingRotationLimitSwitch : BOOL;
+	bEmergency : BOOL;
+END_VAR
+VAR
+	bInitialized : BOOL;	
+	nCorkingRotationCnt : UINT;
+	nCorkingRotationCntLowerLimit : UINT := 30;
+	fbRefill : BLINK;
+	fbRtRefill : R_TRIG;
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+IF NOT bInitialized THEN
+	nWaterLevel := 32000;
+	nMintLevel := 24000;
+	bInitialized := TRUE;	
+ELSE
+	
+	(* Simulazione pulsante di emergenza *)
+	bEmergency := bEmergencyButton;	
+	
+	(* simulazione nastro trasportatore e sensore presenza bottiglia *)
+	IF bConveyor THEN
+		fPos := fPos + 0.1;
+	END_IF
+	
+	IF fPos >= 120.0 THEN
+		fPos := 0;
+	END_IF
+	
+	bBottle := fPos >= 60.0 AND fPos <= 80.0;
+	
+	(* simulazione auto-approvvigionamento liquidi *) 
+	fbRefill(ENABLE:= TRUE, TIMELOW:= T#15S, TIMEHIGH:= T#15S);
+	fbRtRefill(CLK := fbRefill.OUT);
+	IF fbRtRefill.Q THEN
+		IF nWaterLevel < 11000 THEN
+			bRefillWater := TRUE;
+		END_IF
+		IF nMintLevel < 9000 THEN
+			bRefillMint := TRUE;
+		END_IF
+	END_IF
+	
+	(* simulazione livelli acqua e menta *)
+	IF bWater THEN
+		nWaterLevel := nWaterLevel - 11;
+	END_IF
+	
+	IF nWaterLevel < 0 THEN
+		nWaterLevel := 0;
+	END_IF
+	
+	IF bRefillWater THEN
+		nWaterLevel := nWaterLevel + 19567;
+	END_IF
+	
+	IF bMint THEN
+		nMintLevel := nMintLevel - 17;
+	END_IF
+	
+	IF nMintLevel < 0 THEN
+		nMintLevel := 0;
+	END_IF
+	
+	IF bRefillMint THEN
+		nMintLevel := nMintLevel + 20231;
+	END_IF
+	
+	bRefillWater := FALSE;
+	bRefillMint := FALSE;
+	
+	(* simulazione sensore tappatura *)
+	IF bCokingVertical THEN
+		IF bCorkingRotation THEN
+			nCorkingRotationCnt := nCorkingRotationCnt + 1;
+		END_IF
+	ELSE
+		nCorkingRotationCnt := 0;
+	END_IF
+	
+	bCorkingRotationLimitSwitch := nCorkingRotationCnt > nCorkingRotationCntLowerLimit;
+	
+	
+	
+	
+	
+	
+	
+	
+	
+END_IF]]></ST>
+    </Implementation>
+    <LineIds Name="FB_VisuSim">
+      <LineId Id="148" Count="2" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="152" Count="0" />
+      <LineId Id="151" Count="0" />
+      <LineId Id="68" Count="1" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="109" Count="1" />
+      <LineId Id="116" Count="0" />
+      <LineId Id="111" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="65" Count="0" />
+      <LineId Id="11" Count="1" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="17" Count="1" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="192" Count="0" />
+      <LineId Id="194" Count="6" />
+      <LineId Id="202" Count="1" />
+      <LineId Id="201" Count="0" />
+      <LineId Id="193" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="38" Count="1" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="48" Count="1" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="52" Count="1" />
+      <LineId Id="43" Count="2" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="55" Count="6" />
+      <LineId Id="54" Count="0" />
+      <LineId Id="204" Count="2" />
+      <LineId Id="183" Count="0" />
+      <LineId Id="78" Count="0" />
+      <LineId Id="91" Count="0" />
+      <LineId Id="96" Count="0" />
+      <LineId Id="99" Count="1" />
+      <LineId Id="120" Count="2" />
+      <LineId Id="101" Count="1" />
+      <LineId Id="92" Count="1" />
+      <LineId Id="83" Count="5" />
+      <LineId Id="79" Count="0" />
+      <LineId Id="66" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

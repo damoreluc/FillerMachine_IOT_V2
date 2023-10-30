@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_FLM_StatusSaved" Id="{86c974ec-59ce-4dd9-86f7-3315ec08fe94}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+TYPE ST_FLM_StatusSaved :
+STRUCT
+	nPowerOnCnt	: UDINT;				// contatore accensioni macchina
+	nStartStopCnt : UDINT;				// contatore avvii macchina
+	nCCyclesCnt : UDINT;				// contatore cicli di riempimento
+	nCriticalCnt : UDINT;				// contatore eventi critici
+	nErrorCnt : UDINT;					// contatore errori	
+	nWarningCnt : UDINT;				// contatore segnalazioni
+END_STRUCT
+END_TYPE
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

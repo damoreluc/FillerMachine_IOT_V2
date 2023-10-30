@@ -1,0 +1,187 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="IOT_MAIN" Id="{cb4f58dc-6815-4bfd-9a0c-655394d81fe7}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+PROGRAM IOT_MAIN
+VAR
+	bInitialized : BOOL;
+	bConnect : BOOL;		// richiesta TRUE -> connetti FALSE -> disconnetti
+	
+	// array per i dati da pubblicare e loro dimensione 
+	aPeriodicPublish : ARRAY[0..GVL_IOT_Constants.cIOTMAXDATA - 1] OF ST_IOT_PeriodicPublishData;
+	aOnChangePublish : ARRAY[0..GVL_IOT_Constants.cIOTMAXDATA - 1] OF ST_IOT_OnChangePublishData;		
+	nPeriodicPublishSize : UDINT;	
+	nOnChangePublishSize : UDINT;	
+	
+	fbIot : FB_IOT;
+	nInitCycles : UDINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+IF NOT bInitialized THEN
+	IF nInitCycles = 0 THEN	
+		ACT_InitPeriodic();	
+		ACT_InitOnChange();
+	END_IF;
+	nInitCycles := nInitCycles + 1;
+	bConnect := TRUE;
+	bInitialized := GVL_PLC.bTaskRunning;	
+ELSE
+	
+	// Qui vengono letti ad ogni ciclo i valori da FLM che verranno pubblicati
+	// nei topic corrispondenti
+ 
+	aOnChangePublish[0].stData.uValue.n := TO_DINT(GVL_PLC.stFlmStatus.eStep);
+	aOnChangePublish[1].stData.uValue.b := GVL_PLC.stFlmStatus.bFailure;
+	aOnChangePublish[2].stData.uValue.b := GVL_PLC.stFlmStatus.bWarning;
+
+	aPeriodicPublish[0].stData.uValue.b := GVL_PLC.stFlmOut.bCorkingVertical;
+	aPeriodicPublish[1].stData.uValue.b := GVL_PLC.stFlmOut.bCorkingRotation;
+	aPeriodicPublish[2].stData.uValue.f := TO_LREAL(GVL_PLC.stFlmIn.fWaterLevel);
+	aPeriodicPublish[3].stData.uValue.f := TO_LREAL(GVL_PLC.stFlmIn.fMintLevel);
+	
+	fbIot(
+		bEnable:= TRUE, 
+		bConnect:= bConnect, 
+		tAutoAckTime:= T#2M, 
+		stParams:= GVL_IOT.stIotParams, 
+		aPeriodicPublish := aPeriodicPublish,		
+		aOnChangePublish := aOnChangePublish,
+		nPeriodicPublishSize := nPeriodicPublishSize, 
+		nOnChangePublishSize := nOnChangePublishSize
+	);
+	
+	// I comandi letti nel subtopic corrispondente vengono qui scritti su
+	// delle variabili globali in modo da poter essere letti dalla task PLC
+	// e usati all'interno di FLM
+	GVL_IOT.stFlmCmd.bStart := fbIot.bFlmStartCmd;
+	GVL_IOT.stFlmCmd.bStop := fbIot.bFlmStopCmd;
+	GVL_IOT.stFlmCmd.bAck := fbIot.bFlmAckCmd;
+END_IF]]></ST>
+    </Implementation>
+    <Action Name="ACT_InitOnChange" Id="{f088ad27-9958-4dee-bd04-e3c24f1c4b7c}">
+      <Implementation>
+        <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// inizializzazione degli elementi dell'array che contiene i dati da scambiare
+// al cambiamento
+
+aOnChangePublish[0].stData.sSubtopic := '/Step';
+aOnChangePublish[0].stData.eType := E_IOT_DataType.I32;
+
+aOnChangePublish[1].stData.sSubtopic := '/Failure';
+aOnChangePublish[1].stData.eType := E_IOT_DataType.Boolean;
+
+aOnChangePublish[2].stData.sSubtopic := '/Warning';
+aOnChangePublish[2].stData.eType := E_IOT_DataType.Boolean;
+
+// dimensione effettiva dell'array
+nOnChangePublishSize := 3;]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_InitPeriodic" Id="{34aadb32-f70a-4eb7-a69c-27a152d30f33}">
+      <Implementation>
+        <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// inizializzazione degli elementi dell'array che contiene i dati da scambiare
+// ciclicamente.
+
+aPeriodicPublish[0].eUpdateSpeed := E_IOT_UpdateSpeed.Fast;
+aPeriodicPublish[0].stData.sSubtopic := '/CorkingVertical';
+aPeriodicPublish[0].stData.eType := E_IOT_DataType.Boolean;
+
+aPeriodicPublish[1].eUpdateSpeed := E_IOT_UpdateSpeed.Fast;
+aPeriodicPublish[1].stData.sSubtopic := '/CorkingRotation';
+aPeriodicPublish[1].stData.eType := E_IOT_DataType.Boolean;
+
+aPeriodicPublish[2].eUpdateSpeed := E_IOT_UpdateSpeed.Slow;
+aPeriodicPublish[2].stData.sSubtopic := '/WaterLevel';
+aPeriodicPublish[2].stData.eType := E_IOT_DataType.F64;
+
+aPeriodicPublish[3].eUpdateSpeed := E_IOT_UpdateSpeed.Slow;
+aPeriodicPublish[3].stData.sSubtopic := '/MintLevel';
+aPeriodicPublish[3].stData.eType := E_IOT_DataType.F64;
+
+// dimensione effettiva dell'array
+nPeriodicPublishSize := 4;
+]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="IOT_MAIN">
+      <LineId Id="6" Count="2" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="94" Count="0" />
+      <LineId Id="38" Count="1" />
+      <LineId Id="95" Count="1" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="32" Count="1" />
+      <LineId Id="116" Count="3" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="44" Count="2" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="47" Count="2" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="21" Count="6" />
+      <LineId Id="57" Count="0" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="120" Count="4" />
+      <LineId Id="74" Count="1" />
+      <LineId Id="34" Count="0" />
+    </LineIds>
+    <LineIds Name="IOT_MAIN.ACT_InitOnChange">
+      <LineId Id="2" Count="5" />
+      <LineId Id="29" Count="1" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="22" Count="1" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="25" Count="1" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="IOT_MAIN.ACT_InitPeriodic">
+      <LineId Id="2" Count="2" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="10" Count="1" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="13" Count="1" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="16" Count="1" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="8" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

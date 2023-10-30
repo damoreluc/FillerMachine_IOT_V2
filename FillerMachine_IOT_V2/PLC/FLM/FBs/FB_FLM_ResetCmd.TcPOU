@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_FLM_ResetCmd" Id="{2ea2060c-53dd-457e-a915-1ceb35cba880}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+FUNCTION_BLOCK FB_FLM_ResetCmd
+
+VAR_INPUT
+
+END_VAR
+
+VAR_IN_OUT
+	
+END_VAR
+
+VAR
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+;
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_FLM_ResetCmd">
+      <LineId Id="188" Count="3" />
+      <LineId Id="211" Count="0" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="212" Count="0" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

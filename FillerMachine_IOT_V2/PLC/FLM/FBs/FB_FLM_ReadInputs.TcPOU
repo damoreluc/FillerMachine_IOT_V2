@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_FLM_ReadInputs" Id="{ec0b40a2-6672-43e2-85fc-f2efe514a552}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+FUNCTION_BLOCK FB_FLM_ReadInputs
+
+VAR_INPUT
+	stParams : ST_FLM_Params;
+END_VAR
+
+VAR_IN_OUT	
+	stRawIn : ST_FLM_RawIn;
+END_VAR
+
+VAR_OUTPUT
+	stIn :  ST_FLM_In;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+(* digital *)
+stIn.bEmergency := stRawIn.bEmergency;
+stIn.bStartButton := stRawIn.bStartButton;
+stIn.bStopButton := NOT stRawIn.bStopButton;
+stIn.bAckButton := stRawIn.bAckButton;
+stIn.bBottle := stRawIn.bBottle;
+stIn.bCorkingRotationLimitSwitch := stRawIn.bCorkingRotationLimitSwitch;
+
+(* analog *)
+stIn.fWaterLevel := F_FLM_RawToLevel(stRawIn.nWaterLevel, stParams.fWaterMaxLevel);
+stIn.fMintLevel := F_FLM_RawToLevel(stRawIn.nMintLevel, stParams.fMintMaxLevel);
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_FLM_ReadInputs">
+      <LineId Id="365" Count="14" />
+      <LineId Id="316" Count="0" />
+      <LineId Id="398" Count="1" />
+      <LineId Id="397" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

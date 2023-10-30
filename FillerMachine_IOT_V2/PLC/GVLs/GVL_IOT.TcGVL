@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <GVL Name="GVL_IOT" Id="{e452f75a-8d8a-458b-989f-37d2a5aab5b0}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+{attribute 'qualified_only'}
+VAR_GLOBAL PERSISTENT
+	stIotParams : ST_IOT_Params;		// Parametri per la comunicazione MQTT
+	stFlmCmd : ST_FLM_Cmd;				// comandi di FLM
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

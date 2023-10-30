@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_FLM_CorkingParams" Id="{751b311a-b236-4e62-85af-2dfdf4d52800}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+TYPE ST_FLM_CorkingParams :
+STRUCT
+	tDown : TIME := T#1S;			// durata del movimento verso il basso
+	tUp : TIME := T#500MS;			// durata movimento verso l'alto	
+END_STRUCT
+END_TYPE
+
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

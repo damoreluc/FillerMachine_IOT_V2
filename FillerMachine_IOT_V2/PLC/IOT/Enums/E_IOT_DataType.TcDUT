@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="E_IOT_DataType" Id="{b37a5f55-c7ae-4015-a541-1b9b584f2217}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// questa enumerazione descrive serve per identificare il tipo di dato contenuto
+// all'interno dell'unione U_IOT_DataValue in modo da poterlo interpretare 
+// correttamente
+
+{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE E_IOT_DataType :
+(
+	Boolean := 0,
+	I32 := 1,
+	F64 := 2
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

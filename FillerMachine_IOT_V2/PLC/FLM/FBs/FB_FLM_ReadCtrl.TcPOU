@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_FLM_ReadCtrl" Id="{6fd4f001-feee-49be-a0d9-2f6494cf6ba3}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+FUNCTION_BLOCK FB_FLM_ReadCtrl
+
+VAR_INPUT
+	nId:	INT;
+	bEnable : BOOL;
+	//stIn : ST_FLM_In;
+END_VAR
+
+VAR_IN_OUT
+	stIn : ST_FLM_In;
+END_VAR
+
+VAR_OUTPUT
+	stCtrl : ST_FLM_Ctrl;
+END_VAR
+
+VAR
+	fbTonStartup: TON;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+fbTonStartup(IN := TRUE, PT := T#3S);
+stCtrl.bEmergency := stIn.bEmergency;
+stCtrl.bEnable := fbTonStartup.Q AND bEnable;
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_FLM_ReadCtrl">
+      <LineId Id="90" Count="4" />
+      <LineId Id="59" Count="2" />
+      <LineId Id="117" Count="1" />
+      <LineId Id="27" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

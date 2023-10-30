@@ -1,0 +1,153 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_FLM_Diagnostic" Id="{7f54e443-d696-436a-8272-ebbffc9144c2}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+FUNCTION_BLOCK FB_FLM_Diagnostic
+VAR_INPUT
+	stIn : ST_FLM_In;
+	stOut : ST_FLM_Out;
+	stParams : ST_FLM_Params;
+	stCtrl : ST_FLM_Ctrl;
+	bHwError : BOOL;
+	bAck : BOOL;
+	stStatus : ST_FLM_Status;
+END_VAR
+
+VAR_IN_OUT
+	stMotion : ST_FLM_Motion;
+	stDiagnostic : ST_Diagnostic;
+END_VAR
+
+VAR_OUTPUT	
+	bCritical : BOOL;
+	bError : BOOL;
+	bWarning : BOOL;
+	bInfo  : BOOL;
+	bVerbose : BOOL;
+	bFailure : BOOL;
+	bBlinking : BOOL;
+	bFixed : BOOL;
+	bHorn : BOOL;
+END_VAR
+
+VAR	
+	stInstantDiagnostic : ST_Diagnostic;	
+	nUi : UDINT;
+
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+(* reSet condizioni istantantanee *)
+FOR nUi := 0 TO GVL_Diagnostic.cMAXEVENTS -1 DO
+	stInstantDiagnostic.aCritical[nUi]	:= 0;
+	stInstantDiagnostic.aError[nUi]		:= 0;
+	stInstantDiagnostic.aWarning[nUi]	:= 0;
+	stInstantDiagnostic.aInfo[nUi]		:= 0;
+	stInstantDiagnostic.aVerbose[nUi]	:= 0; 
+END_FOR
+
+(* filtri, etc *)
+
+(* imposta condizioni istantanee *)
+stInstantDiagnostic.aCritical[0] := bHwError;
+stInstantDiagnostic.aCritical[1] := NOT stCtrl.bEmergency;
+
+stInstantDiagnostic.aError[0] := stStatus.eErrorStep <> E_FLM_Step.NoStep;
+stInstantDiagnostic.aError[1] := stStatus.stCorking.eErrorStep <> E_FLM_CorkingStep.NoStep;
+stInstantDiagnostic.aError[2] := (stStatus.eStep > E_FLM_Step.Stop) AND (stIn.fWaterLevel < stParams.fWaterMaxLevel * 0.1);
+stInstantDiagnostic.aError[3] := (stStatus.eStep > E_FLM_Step.Stop) AND (stIn.fMintLevel < stParams.fMintMaxLevel * 0.1);
+
+stInstantDiagnostic.aWarning[0] := (stStatus.eStep > E_FLM_Step.Stop) AND (stIn.fWaterLevel < stParams.fWaterMaxLevel * 0.2);
+stInstantDiagnostic.aWarning[1] := (stStatus.eStep > E_FLM_Step.Stop) AND (stIn.fMintLevel < stParams.fMintMaxLevel * 0.2);
+
+(* reset condizioni ritenute *)
+IF bAck THEN
+	FOR nUi := 0 TO GVL_Diagnostic.cMAXEVENTS -1 DO
+		stDiagnostic.aCritical[nUi] := 0;
+		stDiagnostic.aError[nUi] := 0;
+		stDiagnostic.aWarning[nUi] := 0;
+		stDiagnostic.aInfo[nUi] := 0;
+		stDiagnostic.aVerbose[nUi] := 0; 
+	END_FOR
+	bCritical := FALSE;
+	bError := FALSE;
+	bWarning := FALSE;
+	bInfo := FALSE;
+	bVerbose := FALSE;
+	bBlinking := FALSE;
+	bHorn := FALSE;
+END_IF									
+
+(* imposta condizioni ritenute *)									
+FOR nUi := 0 TO GVL_Diagnostic.cMAXEVENTS -1 DO
+	IF stInstantDiagnostic.aCritical[nUi] THEN
+		stDiagnostic.aCritical[nUi] := TRUE;
+		bCritical := TRUE;
+	END_IF
+	IF stInstantDiagnostic.aError[nUi] THEN
+		stDiagnostic.aError[nUi] := TRUE;
+		bError := TRUE;
+	END_IF
+	IF stInstantDiagnostic.aWarning[nUi] THEN
+		stDiagnostic.aWarning[nUi] := TRUE;
+		bWarning := TRUE;
+	END_IF
+	IF stInstantDiagnostic.aInfo[nUi] THEN
+		stDiagnostic.aInfo[nUi] := TRUE;
+		bInfo := TRUE;
+	END_IF
+	IF stInstantDiagnostic.aVerbose[nUi] THEN
+		stDiagnostic.aVerbose[nUi] := TRUE;
+		bVerbose := TRUE;
+	END_IF
+END_FOR
+
+bFailure := bCritical OR bError;
+
+bBlinking := bFailure;
+bHorn := bFailure;
+bFixed := bWarning;
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_FLM_Diagnostic">
+      <LineId Id="1061" Count="3" />
+      <LineId Id="1060" Count="0" />
+      <LineId Id="693" Count="8" />
+      <LineId Id="813" Count="0" />
+      <LineId Id="943" Count="0" />
+      <LineId Id="723" Count="1" />
+      <LineId Id="1070" Count="0" />
+      <LineId Id="1106" Count="0" />
+      <LineId Id="1105" Count="0" />
+      <LineId Id="1107" Count="0" />
+      <LineId Id="1142" Count="0" />
+      <LineId Id="1145" Count="0" />
+      <LineId Id="1147" Count="0" />
+      <LineId Id="1150" Count="0" />
+      <LineId Id="1146" Count="0" />
+      <LineId Id="854" Count="0" />
+      <LineId Id="740" Count="13" />
+      <LineId Id="1173" Count="1" />
+      <LineId Id="754" Count="24" />
+      <LineId Id="1167" Count="0" />
+      <LineId Id="126" Count="0" />
+      <LineId Id="1217" Count="0" />
+      <LineId Id="1171" Count="0" />
+      <LineId Id="1175" Count="0" />
+      <LineId Id="1154" Count="0" />
+      <LineId Id="1256" Count="1" />
+      <LineId Id="1155" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

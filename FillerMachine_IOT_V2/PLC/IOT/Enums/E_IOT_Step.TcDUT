@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="E_IOT_Step" Id="{e508d0ec-6111-4918-acec-f16ea70f53d5}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// passi della macchina a stati che gestisce la comunicazione IOT
+
+{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE E_IOT_Step :
+(
+	(* special steps *)
+	NoStep := -32767,		// nessuno step
+	Unknown := -32000,		// step sconosciuto
+	
+	(* Error steps *)
+	NeOrError := -990,		// non abilitata o in errore
+	Reset := -980,			// azzeramento errori
+
+	(* Stop *)
+	Stop := 0,				// stop
+	
+	(* Cycle *)
+	Configure := 100,		// configurazione 
+	Connect := 200,			// connessione
+	Subscribe := 210,		// sottoscrivi i topic che interessano
+	Online := 220,			// in linea
+	Unsubscribe := 300,		// rimuovi sottoscrizioni
+	Disconnect := 310		// disconnessione
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

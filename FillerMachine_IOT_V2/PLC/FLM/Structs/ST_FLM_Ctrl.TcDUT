@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_FLM_Ctrl" Id="{496e3f8a-d22a-4f01-8ec7-b972a9e14009}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+TYPE ST_FLM_Ctrl :
+STRUCT
+	bEmergency: BOOL;	// Emergenza. Deve essere TRUE perchè la macchina possa operare
+	bEnable: BOOL;		// Abilitazione macchina. Deve essere TRUE perchè la macchina possa operare
+END_STRUCT
+END_TYPE
+
+
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

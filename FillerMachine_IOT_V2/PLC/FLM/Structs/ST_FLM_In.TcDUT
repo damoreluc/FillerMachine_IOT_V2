@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_FLM_In" Id="{d8f4bba0-5fcc-40b5-8f3d-95ee45fc01a9}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+TYPE ST_FLM_In :
+STRUCT
+	(* digital *)
+	bEmergency : BOOL;						// emergenza (NC)
+	bStartButton : BOOL;					// pulsante di start (NO)
+	bStopButton : BOOL;						// pulsante di stop (NO)
+	bAckButton : BOOL;						// pulsante di riconoscimento allarmi (NO)
+	bBottle : BOOL;							// fotocellula presenza bottiglia (NO)
+	bCorkingRotationLimitSwitch : BOOL;		// finecorsa rotazione tappatura (NO)
+	(* analog *)
+	fWaterLevel : REAL;		// livello acqua
+	fMintLevel : REAL;		// livello menta			
+END_STRUCT
+END_TYPE
+
+
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

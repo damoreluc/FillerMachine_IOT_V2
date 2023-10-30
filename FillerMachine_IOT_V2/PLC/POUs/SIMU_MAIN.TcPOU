@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="SIMU_MAIN" Id="{32957b9b-aad8-4d34-a4e6-db85d79f4649}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+PROGRAM SIMU_MAIN
+VAR
+	bInitialized : BOOL;
+	fbVisuSim : FB_VisuSim;
+	bRefillMint : BOOL;
+	bRefillWater : BOOL;
+	bEmergencyButton : BOOL;
+	fPos : REAL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+IF NOT bInitialized THEN
+	bEmergencyButton := TRUE;	
+	bInitialized := TRUE;
+	
+ELSE
+	(* Visu and Simulation *)
+	fbVisuSim(
+		bConveyor := GVL_PLC.stFlmRawOut.bConveyor, 
+		bWater := GVL_PLC.stFlmRawOut.bWater, 
+		bMint := GVL_PLC.stFlmRawOut.bMint,
+		bCorkingRotation := GVL_PLC.stFlmRawOut.bCorkingRotation, 
+		bCokingVertical := GVL_PLC.stFlmRawOut.bCorkingVertical,
+		bRefillWater := bRefillWater, 
+		bRefillMint := bRefillMint,
+		bEmergencyButton := bEmergencyButton,
+	);
+	fpos := fbVisuSim.fPos;
+	GVL_PLC.stFlmRawIn.bEmergency := fbVisuSim.bEmergency;
+	GVL_PLC.stFlmRawIn.bBottle := fbVisuSim.bBottle;
+	GVL_PLC.stFlmRawIn.nWaterLevel := fbVisuSim.nWaterLevel;
+	GVL_PLC.stFlmRawIn.nMintLevel := fbVisuSim.nMintLevel;
+	GVL_PLC.stFlmRawIn.bCorkingRotationLimitSwitch := fbVisuSim.bCorkingRotationLimitSwitch; 
+	GVL_SIMU.bTaskRunning := TRUE;
+END_IF
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="SIMU_MAIN">
+      <LineId Id="55" Count="5" />
+      <LineId Id="127" Count="0" />
+      <LineId Id="62" Count="0" />
+      <LineId Id="128" Count="0" />
+      <LineId Id="63" Count="11" />
+      <LineId Id="95" Count="0" />
+      <LineId Id="75" Count="4" />
+      <LineId Id="129" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="111" Count="0" />
+      <LineId Id="110" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

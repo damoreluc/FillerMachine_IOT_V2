@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="E_FLM_CorkingStep" Id="{e6355dc1-83cd-4cd4-92e2-211f408ed521}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+{attribute 'qualified_only'}
+{attribute 'strict'}
+{attribute 'to_string'}
+
+TYPE E_FLM_CorkingStep :
+(
+	(* special steps *)
+	NoStep := -32767,		// nessuno step
+	Unknown := -32000,		// step sconosciuto
+	
+	(* Error steps *)
+	NeOrError := -990,		// non abilitata o in errore
+	Reset := -980,			// azzeramento errori
+		
+	(* Stop *)
+	Stop := 0,
+	
+	(* Ready *)
+	Ready := 100,	
+	
+	(* Cycle *)
+	Down := 200,			// movimento verticale verso il basso
+	Rotation := 210,		// rotazione 
+	Up := 220,				// movimento verticale verso l'alto
+	Done := 230,			// ciclo concluso
+	(* Stopping *)
+	Stopping := 900	
+);
+END_TYPE
+
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

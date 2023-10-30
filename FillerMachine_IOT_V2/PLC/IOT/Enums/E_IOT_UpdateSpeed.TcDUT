@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="E_IOT_UpdateSpeed" Id="{0091c7a0-c78d-4b2b-a50c-d47406ef4ef5}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// questa enumerazione serve ad identificare il periodo di aggiornamento dei
+// dati che vengono pubblicati su MQTT
+
+{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE E_IOT_UpdateSpeed :
+(
+	Slow := 0,			// 1s	
+	Fast := 1			// 100ms
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

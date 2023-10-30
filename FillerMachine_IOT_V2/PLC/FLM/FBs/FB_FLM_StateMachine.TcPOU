@@ -1,0 +1,361 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_FLM_StateMachine" Id="{cac798c5-e5b6-486d-a8ab-7c5cb4d583cd}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+FUNCTION_BLOCK FB_FLM_StateMachine
+VAR_INPUT	
+	stIn		: ST_FLM_In;
+	stCtrl		: ST_FLM_Ctrl;
+	stCmd		: ST_FLM_Cmd;
+	stParams	: ST_FLM_Params;
+	stStatus	: ST_FLM_Status;
+		
+	bBottle : BOOL;				// fotocellula FC1
+END_VAR
+
+VAR_OUTPUT
+	eStep :  E_FLM_Step;
+	tStepTime : TIME;
+	eErrStep : E_FLM_Step;
+	nErrId : DINT;
+	
+	bConveyor : BOOL;			// nastro trasportatore
+	bWater : BOOL;				// riempimento acqua
+	bMint : BOOL;				// riempimento menta	
+	bCorkingStart : BOOL;		// start inserimento del tappo	
+	bBlinkingGreen : BOOL;		// lampada verde lampeggiante
+	bFixedGreen : BOOL;			// lampada verde lampeggiante
+END_VAR
+
+VAR_IN_OUT
+	
+END_VAR
+
+VAR
+	bInitialized :  BOOL;
+	eNewstep :  E_FLM_Step;
+	bEntryact :  BOOL;
+	fbTonStep :  TON;	
+	
+	fbTonBottle : TON;
+	fbRtBottle : R_TRIG;
+		
+	bStopRequest : BOOL;
+	
+	nFillingCycles : USINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+IF NOT bInitialized THEN
+	eNewstep := E_FLM_Step.NoStep;
+	eStep := E_FLM_Step.Stop;
+	bEntryact := FALSE;
+	bInitialized := TRUE;		
+ELSE	
+	(* disabilitata o avaria *)	
+	IF NOT stCtrl.bEnable OR NOT(stCtrl.bEmergency) OR stStatus.bFailure THEN
+		eNewstep := E_FLM_Step.NeOrError;
+	END_IF
+	
+	IF eNewstep <> E_FLM_Step.NoStep THEN
+		eStep := eNewstep;
+		eNewstep := E_FLM_Step.NoStep;
+		bEntryact := FALSE;
+	END_IF;
+
+	(* filtri *)
+	fbTonBottle(IN:= bBottle, PT:= T#500MS);		// filtro sensore presenza bottiglia
+	
+	(* fronti *)
+	fbRtBottle(CLK:= fbTonBottle.Q);
+	
+	(* richieste *)
+	IF stCmd.bStop THEN
+		bStopRequest := TRUE;
+	END_IF; 
+	
+	CASE eStep OF
+		
+		(* not Enabled or Error *)
+		E_FLM_Step.NeOrError :
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bConveyor := FALSE;
+			bWater := FALSE;
+			bMint := FALSE;
+			bCorkingStart := FALSE;
+			bBlinkingGreen := FALSE;
+			bFixedGreen := FALSE;
+			
+			nFillingCycles := 0;
+					
+			(* transition *)
+			IF stCtrl.bEnable THEN				
+				IF stCmd.bAck THEN
+					eNewstep := E_FLM_Step.Reset;
+				END_IF
+			END_IF
+
+			(* exitact *)
+			IF eNewstep <> E_FLM_Step.NoStep THEN
+				nErrId := 0;
+				eErrStep := E_FLM_Step.NoStep;
+			END_IF;
+
+		(* Reset *)
+		E_FLM_Step.Reset :
+			(* entry action *)
+			IF NOT bEntryact THEN				
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bConveyor := FALSE;
+			bWater := FALSE;
+			bMint := FALSE;
+			bCorkingStart := FALSE;
+			bBlinkingGreen := FALSE;
+			bFixedGreen := FALSE;
+			
+			nFillingCycles := 0;
+					
+			(* transition *)
+			IF stCtrl.bEnable THEN				
+				IF NOT stStatus.bFailure AND stStatus.stCorking.eStep = E_FLM_CorkingStep.Stop THEN
+					eNewstep := E_FLM_Step.Stop;
+				END_IF
+			END_IF
+
+			(* exitact *)
+			IF eNewstep <> E_FLM_Step.NoStep THEN
+				;
+			END_IF;		
+			
+		(* Stop *)
+		E_FLM_Step.Stop:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bStopRequest := FALSE;
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bConveyor := FALSE;
+			bWater := FALSE;
+			bMint := FALSE;
+			bCorkingStart := FALSE;
+			bBlinkingGreen := FALSE;
+			bFixedGreen := FALSE;
+			
+			nFillingCycles := 0;
+				
+			(* transition *)			
+			IF NOT stCmd.bStop AND stCmd.bStart THEN
+				eNewstep := E_FLM_Step.Feeding;
+			END_IF
+			
+			(* exitact *)
+			IF eNewstep <> E_FLM_Step.NoStep THEN
+				;
+			END_IF;
+			
+		(* Feeding *)
+		E_FLM_Step.Feeding:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bConveyor := TRUE;
+			bWater := FALSE;
+			bMint := FALSE;
+			bCorkingStart := FALSE;
+			bBlinkingGreen := FALSE;
+			bFixedGreen := TRUE;
+			bBlinkingGreen := bStopRequest;
+			bFixedGreen := TRUE;
+		
+			(* transition *)
+			IF bStopRequest AND NOT bBottle THEN
+				eNewstep := E_FLM_Step.Stopping;
+			ELSE
+				IF fbRtBottle.Q THEN
+					eNewstep := E_FLM_Step.WaterFilling;
+				END_IF
+			END_IF
+			
+			(* exitact *)
+			IF eNewstep <> E_FLM_Step.NoStep THEN
+				;
+			END_IF;
+			
+		(* Water Filling *)
+		E_FLM_Step.WaterFilling:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				nFillingCycles := nFillingCycles + 1;
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bConveyor := FALSE;
+			bWater := TRUE;
+			bMint := FALSE;
+			bCorkingStart := FALSE;
+			bBlinkingGreen := bStopRequest;
+			bFixedGreen := TRUE;
+		
+			(* transition *)
+			IF tStepTime >= stParams.tWaterFillingTime THEN
+				eNewstep := E_FLM_Step.MintFilling;
+			END_IF
+			
+			(* exitact *)
+			IF eNewstep <> E_FLM_Step.NoStep THEN
+				;
+			END_IF;
+			
+		(* Mint Filling *)
+		E_FLM_Step.MintFilling:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bConveyor := FALSE;
+			bWater := FALSE;
+			bMint := TRUE;
+			bCorkingStart := FALSE;
+			bBlinkingGreen := bStopRequest;
+			bFixedGreen := TRUE;
+		
+			(* transition *)
+			IF tStepTime >= stParams.tMintFillingTime THEN
+				IF nFillingCycles >= stParams.nFillingCycles THEN
+					eNewstep := E_FLM_Step.Corking;
+				ELSE 
+					eNewstep := E_FLM_Step.WaterFilling;
+				END_IF
+					
+			END_IF
+			
+			(* exitact *)
+			IF eNewstep <> E_FLM_Step.NoStep THEN
+				IF eNewstep = E_FLM_Step.Corking THEN
+					nFillingCycles := 0;
+				END_IF
+			END_IF;	
+
+		(* Corking *)
+		E_FLM_Step.Corking:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bConveyor := FALSE;
+			bWater := FALSE;
+			bMint := FALSE;
+			bCorkingStart := TRUE;
+			bBlinkingGreen := bStopRequest;
+			bFixedGreen := TRUE;
+		
+			(* transition *)
+			IF stStatus.stCorking.eStep = E_FLM_CorkingStep.Done THEN
+				eNewstep := E_FLM_Step.Feeding;
+			END_IF
+			
+			(* exitact *)
+			IF eNewstep <> E_FLM_Step.NoStep THEN
+				;
+			END_IF;
+
+		(* Stopping *)
+		E_FLM_Step.Stopping:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bConveyor := tStepTime < T#500MS;
+			bWater := tStepTime >= T#1000MS AND tStepTime <= T#1300MS;
+			bMint := tStepTime >= T#1000MS AND tStepTime <= T#1300MS;
+			bCorkingStart := FALSE;
+			bBlinkingGreen := TRUE;
+			bFixedGreen := FALSE;
+		
+			(* transition *)
+			IF tStepTime >= T#4S THEN
+				eNewstep := E_FLM_Step.Stop;
+			END_IF; 
+			
+			(* exitact *)
+			IF eNewstep <> E_FLM_Step.NoStep THEN
+				;
+			END_IF;		
+		ELSE
+			eNewstep := E_FLM_Step.NeOrError;
+			eErrStep := E_FLM_Step.Unknown;
+			nErrId := -9;			
+	END_CASE;
+	
+	(* tempo di permanenza nello step *)
+	fbTonStep(IN := (eNewstep = E_FLM_Step.NoStep), PT := T#500H);
+	tStepTime := fbTonStep.ET;
+	
+END_IF;
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_FLM_StateMachine">
+      <LineId Id="1075" Count="4" />
+      <LineId Id="775" Count="22" />
+      <LineId Id="799" Count="18" />
+      <LineId Id="1177" Count="1" />
+      <LineId Id="818" Count="3" />
+      <LineId Id="1068" Count="3" />
+      <LineId Id="824" Count="2" />
+      <LineId Id="1072" Count="1" />
+      <LineId Id="1127" Count="0" />
+      <LineId Id="831" Count="13" />
+      <LineId Id="1179" Count="1" />
+      <LineId Id="845" Count="27" />
+      <LineId Id="1181" Count="2" />
+      <LineId Id="874" Count="23" />
+      <LineId Id="1175" Count="1" />
+      <LineId Id="1184" Count="1" />
+      <LineId Id="898" Count="27" />
+      <LineId Id="1186" Count="1" />
+      <LineId Id="926" Count="22" />
+      <LineId Id="1188" Count="1" />
+      <LineId Id="949" Count="17" />
+      <LineId Id="990" Count="11" />
+      <LineId Id="1190" Count="1" />
+      <LineId Id="1002" Count="9" />
+      <LineId Id="1035" Count="12" />
+      <LineId Id="1192" Count="1" />
+      <LineId Id="1048" Count="19" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="1242" Count="1" />
+      <LineId Id="1241" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

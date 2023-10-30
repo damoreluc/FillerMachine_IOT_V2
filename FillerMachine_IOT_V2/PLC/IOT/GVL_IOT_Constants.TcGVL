@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <GVL Name="GVL_IOT_Constants" Id="{dd975e21-6033-4a37-9a5e-323661a230e2}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+
+{attribute 'qualified_only'}
+VAR_GLOBAL CONSTANT
+	cIOTMAXDATA : UDINT := 32;
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <GVL Name="GVL_Diagnostic" Id="{cadd687f-bdd8-4ed2-9b59-1452910d482b}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+{attribute 'qualified_only'}
+VAR_GLOBAL CONSTANT
+	cMAXEVENTS : UDINT := 64;
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_IOT_Params" Id="{5f5a5c9d-35d9-4e4e-b0dd-46f65b20e7b5}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// Questa struttura cointiene i parametri necessari al funzionamento della
+// FB_IOT. 
+
+TYPE ST_IOT_Params :
+STRUCT
+	// i parametri per instaurare la connessione con il broker 
+	sHostName : STRING := 'test.mosquitto.org';
+	nHostPort : UINT := 1883; 
+	// certificati necessari per l'autenticazione. Si possono usare anche
+	// user e password. vd: https://infosys.beckhoff.com/content/1033/tf6701_tc3_iot_communication_mqtt/3391835403.html?id=6531035858226877065
+	
+	stMqttTls : ST_IotMqttTls := ();
+		
+	// topic generale all'interno del quale ci saranno i subtopic nei quali
+	// verranno pubblicati i dati
+	// il pragma {attribute 'TcEncoding':='UTF-8'} va sempre usato per le 
+	// stringhe quando si opera con MQTT
+	{attribute 'TcEncoding':='UTF-8'}
+	sTopicPrefix : STRING := 'FillerMachine';
+	
+	// subtopic da sottoscrivere per leggere i comandi  
+	{attribute 'TcEncoding':='UTF-8'}
+	sCmdSubscribedTopic : STRING := '/cmd';
+	
+	// numero massimo di messaggi da leggere per ciclo dai topic sottoscritti 
+	nDequeueMessagesPerCycle : UINT := 3;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_FLM_Status" Id="{60b6065c-8b1d-4d29-a177-2fe037cf78fd}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+TYPE ST_FLM_Status :
+STRUCT
+	
+	stSaved : ST_FLM_StatusSaved;		// Valori ritenuti - utili p.e. per statistiche
+	bCritical : BOOL;					// la macchina ha almento una condizione critica attiva
+	bError : BOOL;						// la macchina ha almento una condizione di errore attiva	
+	bWarning : BOOL;					// la macchina ha almeno una segnalazione attiva	
+	bInfo : BOOL;						// la macchina ha almeno una informazione attiva			
+	bVerbose : BOOL;					// la macchina ha almeno un messaggio attiva
+	
+	bFailure : BOOL;					// la macchina è in avaria (critica + error)	
+	eStep : E_FLM_Step;					// passo della macchina a stati
+	strStep : STRING;					// passo come stringa
+	tStepTime : TIME;					// tempo di permanenza nel passo
+	eErrorStep : E_FLM_Step;			// passo in cui si è generato l'errore
+	nErrorID : DINT;					// codice di errore
+	
+	stCorking : ST_FLM_CorkingStatus;	// struttura di stato del dispositivo di tappatura
+	
+END_STRUCT
+END_TYPE
+
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

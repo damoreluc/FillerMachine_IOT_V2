@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_IOT_PeriodicPublishData" Id="{4e0dbe30-d8c4-4b1e-8d02-a96600698d45}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// Questa struttura definisce un dato da pubblicare ciclicamente. Oltre al 
+// dato è presente nellea struttura l'elemento che definisce l'intervallo 
+// di pubblicazione
+
+TYPE ST_IOT_PeriodicPublishData :
+STRUCT
+	eUpdateSpeed : E_IOT_UpdateSpeed;
+	stData : ST_IOT_Data;	
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

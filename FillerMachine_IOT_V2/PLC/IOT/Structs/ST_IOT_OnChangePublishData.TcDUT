@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_IOT_OnChangePublishData" Id="{9684e1e9-3795-42f6-8093-91f8942ab366}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// Questa struttura definisce un dato da pubblicare al cambiamento del suo
+// valore. Oltre al dato è presente nellea struttura l'elemento che su cui
+// salvare il valore precedente in modo da poter fare dei confronti
+
+TYPE ST_IOT_OnChangePublishData :
+STRUCT
+	uOldValue : U_IOT_DataValue;
+	stData : ST_IOT_Data;		
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

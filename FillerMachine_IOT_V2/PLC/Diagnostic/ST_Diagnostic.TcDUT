@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_Diagnostic" Id="{fb1d588e-bb7f-4cb1-97ba-38fe2fe9e238}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+TYPE ST_Diagnostic :
+STRUCT
+	aCritical : ARRAY[0..GVL_Diagnostic.cMAXEVENTS - 1] OF BOOL;	// eventi critici
+	aError : ARRAY[0..GVL_Diagnostic.cMAXEVENTS - 1] OF BOOL;		// errori
+	aWarning : ARRAY[0..GVL_Diagnostic.cMAXEVENTS - 1] OF BOOL;		// segnalazioni
+	aInfo : ARRAY[0..GVL_Diagnostic.cMAXEVENTS - 1] OF BOOL;		// informazioni
+	aVerbose : ARRAY[0..GVL_Diagnostic.cMAXEVENTS - 1] OF BOOL;		// messaggi
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,762 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_IOT" Id="{aa38582e-b1b5-4b9c-aa3b-606f45c288f7}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+FUNCTION_BLOCK FB_IOT
+
+VAR_INPUT
+	bEnable : BOOL;						// abilitazione della FB
+	bConnect : BOOL;					// bit che richiede la connessione
+	tAutoAckTime : TIME;				// tempo di auto riconoscimento degli errori
+	stParams : ST_IOT_Params;			// paramteri 
+	nPeriodicPublishSize : UDINT;		// dimensione dell'array che continene i dati da pubblicare a tempo
+	nOnChangePublishSize : UDINT;		// dimensione dell'arra che contiene i dati da pubblicare al cambiamento
+END_VAR
+
+VAR_IN_OUT
+	aPeriodicPublish : ARRAY[0..GVL_IOT_Constants.cIOTMAXDATA - 1] OF ST_IOT_PeriodicPublishData;	// array di dati da pubblicare a tempo
+	aOnChangePublish : ARRAY[0..GVL_IOT_Constants.cIOTMAXDATA - 1] OF ST_IOT_OnChangePublishData;	// array di dati da pubblicare al cambiamento
+END_VAR
+
+VAR_OUTPUT
+	eStep :  E_IOT_Step;		// passo della macchina a stati
+	tStepTime : TIME;			// tempo nel passo
+	eErrStep : E_IOT_Step;		// passo in cui si è generato l'errore
+	nErrId : DINT;				// id dell'errore
+	bFlmStartCmd : BOOL;		// comando di start per FLM
+	bFlmStopCmd : BOOL;			// comando di stop per FLM
+	bFlmAckCmd : BOOL;			// comando di Ack per FLM
+END_VAR
+
+VAR
+	bInitialized :  BOOL;
+	eNewstep :  E_IOT_Step;
+	bEntryact :  BOOL;
+	fbTonStep :  TON;	
+	bForceOnChangePublish : BOOL;	// forza la pubblicazione dei dati al cambiamento (acnhe se non sono cambiati)
+	bMqttConnect : BOOL;			// bit di connessione MQTT
+	udi : UDINT;
+	fbMqttClient : FB_IotMqttClient;			// client MQTT	
+	fbMessageQueue : FB_IotMqttMessageQueue;	// coda dei messaggi in ingresso	
+	fbMessage : FB_IotMqttMessage;				// messaggio
+	sPayload : STRING(255);
+	bIsEqual : BOOL;	
+	fbBlinkFast : BLINK;						// blink per la pubblicazione dati veloci
+	fbBlinkSlow : BLINK;						// blinck pubblicazione dati lenti
+	fbRtFast : R_TRIG;							// trigger pubblicazione dati veloci
+	fbRtSlow : R_TRIG;							// trigger pubblicazione dati lenti
+	bCmdTopicSubscribed : BOOL;	
+	nDequeueCnt : UINT := 0;					// contatore di scodamento
+	{attribute 'TcEncoding':='UTF-8'}
+	sTopicRcv : STRING(255);					
+	{attribute 'TcEncoding':='UTF-8'}
+	sPayloadRcv : STRING(255);	
+	{attribute 'TcEncoding':='UTF-8'}
+	sAppo: STRING(255);	
+	nFlmCmd : UINT := 0;
+	fbTpFlmStartCmd : TP;						// impulso comando start FLM
+	fbTpFlmStopCmd : TP;						// impulso comando start FLM
+	fbTpFlmAckCmd : TP;							// impulso comando start FLM
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// Questa macchina a stati serve per gestire la connessione verso il broker,
+// la pubblicazione dei dati e la lettura dei messaggi nei topic sottoscritti.
+// Tutto si basa su una FB di tipo FB_IotMqttClient
+// https://infosys.beckhoff.com/content/1033/tf6701_tc3_iot_communication_mqtt/3391835403.html?id=6531035858226877065
+// FB_IotMqttClient utilizza il paradigma della programmazione ad oggetti
+// e in sostanza è una classe. Senza addentrarsi in una spiegazione della
+// programmazione ad oggetti basti dire che una istanza di questa FB è un
+// oggetto sul quale possono essere chiamati dei metodi. I metodi sono delle 
+// funzioni proprie dell'oggetto specifico (l'istanza di FB_IotMqttClient) che
+// hanno visibilità sulle variabili locali dell'oggetto. Ciascun metodo ha 
+// la sua uscita, i suoi ingressi e le sue proprie variabili locali (temporanee)
+// ma può anche operare sulle variabili locali dell'oggetto (l'istanza) che non 
+// sono temporanee ma mantengono il valore tra una chiamata e l'altra. In 
+// questo modo metodi diversi possono condividere delle aree di memoria che 
+// altro non è che quella definita nelle variabili locali dell'oggetto.
+
+
+IF NOT bInitialized THEN
+	eNewstep := E_IOT_Step.NoStep;
+	eStep := E_IOT_Step.Stop;
+	bEntryact := FALSE;
+	bInitialized := TRUE;		
+ELSE	
+	(* disabilitata o avaria *)	
+	IF NOT bEnable THEN
+		eNewstep := E_IOT_Step.NeOrError;
+	END_IF
+	
+	IF eNewstep <> E_IOT_Step.NoStep THEN
+		eStep := eNewstep;
+		eNewstep := E_IOT_Step.NoStep;
+		bEntryact := FALSE;
+	END_IF;
+
+	(* filtri *)	
+	
+	(* fronti *)	
+	
+	// questi blink e trigger servono a creare due bit (i trigger fast e slow)
+	// che sono a TRUE solo per un ciclo ogni, rispettivamente, 100ms e 1s
+	fbBlinkFast(ENABLE:= TRUE, TIMELOW:= T#50MS , TIMEHIGH:= T#50MS);	
+	fbBlinkSlow(ENABLE:= TRUE, TIMELOW:= T#5S , TIMEHIGH:= T#5S);
+	fbRtFast(CLK := fbBlinkFast.OUT);	
+	fbRtSlow(CLK := fbBlinkSlow.OUT);
+	
+	(* richieste *)
+	
+	CASE eStep OF
+		
+		(* not Enabled or Error *)
+		E_IOT_Step.NeOrError :
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bMqttConnect := FALSE;
+			bCmdTopicSubscribed := FALSE;
+					
+			(* transition *)
+			IF bEnable THEN	
+				IF tStepTime > tAutoAckTime THEN 		
+					// qui si fa sostanzialmente un autoreset invece che lasciare 
+					// tutto bloccato fino ad un intervento umano. Questa scelta si 
+					// può fare per le funzionalitàù di comunicazione ma va sempre 
+					// ben ponderata. Qui per esempio si valuta che è preferibile 
+					// tentare di riconnettersi e che perdere informazioni sulle 
+					// casuse di errore non è molto importante.
+					eNewstep := E_IOT_Step.Reset;
+				END_IF
+			END_IF
+
+			(* exitact *)
+			IF eNewstep <> E_IOT_Step.NoStep THEN
+				nErrId := 0;
+				eErrStep := E_IOT_Step.NoStep;
+			END_IF;
+
+		(* Reset *)
+		E_IOT_Step.Reset :
+			(* entry action *)
+			IF NOT bEntryact THEN				
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bMqttConnect := FALSE;
+					
+			(* transition *)
+			IF bEnable THEN				
+				eNewstep := E_IOT_Step.Stop;				
+			END_IF
+
+			(* exitact *)
+			IF eNewstep <> E_IOT_Step.NoStep THEN
+				;
+			END_IF;		
+			
+		(* Stop *)
+		E_IOT_Step.Stop:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bMqttConnect := FALSE;			
+							
+			(* transition *)
+			IF fbMqttClient.bError THEN
+				eNewstep := E_IOT_Step.NeOrError;
+			ELSE			
+				IF bConnect THEN
+					eNewstep := E_IOT_Step.Configure;
+				END_IF
+			END_IF
+			
+			(* exitact *)
+			IF eNewstep <> E_IOT_Step.NoStep THEN
+				IF eNewstep = E_IOT_Step.NeOrError THEN
+					eErrStep := eStep;
+					nErrID := fbMqttClient.hrErrorCode;				
+				END_IF
+			END_IF;
+			
+		(* Configure *)
+		E_IOT_Step.Configure:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)			
+			fbMqttClient.sHostName:= stParams.sHostName;
+			fbMqttClient.nHostPort:= stParams.nHostPort;
+			//fbMqttClient.sClientId:= 'FLM'; 
+			fbMqttClient.sTopicPrefix:= stParams.sTopicPrefix; 			 
+			fbMqttClient.stTLS:= stParams.stMqttTls;
+			fbMqttClient.nKeepAlive := 30;			
+			fbMqttClient.ipMessageQueue := fbMessageQueue;			// FB che gestisce la coda di messaggi			
+			bMqttConnect := FALSE;
+							
+			(* transition *)
+			IF fbMqttClient.bError THEN
+				eNewstep := E_IOT_Step.NeOrError;
+			ELSE			
+				eNewstep := E_IOT_Step.Connect;
+			END_IF
+			
+			(* exitact *)
+			IF eNewstep <> E_IOT_Step.NoStep THEN
+				IF eNewstep = E_IOT_Step.NeOrError THEN
+					eErrStep := eStep;
+					nErrID := fbMqttClient.hrErrorCode;
+				END_IF
+			END_IF;
+			
+		(* Connect *)
+		E_IOT_Step.Connect:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bMqttConnect := TRUE;
+		
+			(* transition *)
+			IF fbMqttClient.bError THEN
+				eNewstep := E_IOT_Step.NeOrError;
+			ELSE
+				IF bConnect THEN
+					IF fbMqttClient.bConnected THEN
+						eNewstep := E_IOT_Step.Subscribe;
+					END_IF
+				ELSE
+					eNewstep := E_IOT_Step.Disconnect;	
+				END_IF
+			END_IF;
+			
+			(* exitact *)
+			IF eNewstep <> E_IOT_Step.NoStep THEN
+				IF eNewstep = E_IOT_Step.NeOrError THEN
+					eErrStep := eStep;
+					nErrID := fbMqttClient.hrErrorCode;
+				END_IF
+			END_IF;
+			
+		(* Subscribe *)
+		E_IOT_Step.Subscribe:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bCmdTopicSubscribed := FALSE;
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bMqttConnect := TRUE;
+			
+			// questo metodo realizza la sottoscrizione al topic indicato
+			// con la qualità del servizio indicata. 
+			// (per QoS vedi: https://mosquitto.org/man/mqtt-7.html)
+			bCmdTopicSubscribed := fbMqttClient.Subscribe(
+				sTopic:=stParams.sCmdSubscribedTopic, 
+				eQoS:=TcIotMqttQos.AtMostOnceDelivery			// qualità del servizo
+			);
+		
+			(* transition *)
+			IF fbMqttClient.bError OR NOT bCmdTopicSubscribed THEN
+				eNewstep := E_IOT_Step.NeOrError;
+			ELSE
+				IF fbMqttClient.bConnected THEN
+					eNewstep := E_IOT_Step.Online;
+				END_IF
+			END_IF;
+			
+			(* exitact *)
+			IF eNewstep <> E_IOT_Step.NoStep THEN
+				IF eNewstep = E_IOT_Step.NeOrError THEN
+					eErrStep := eStep;
+					nErrID := fbMqttClient.hrErrorCode;
+				END_IF
+			END_IF;
+			
+		(* Online *)
+		E_IOT_Step.Online:
+			(* entry action *)
+			IF NOT bEntryact THEN	
+				bForceOnChangePublish := TRUE;		
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bMqttConnect := TRUE;
+			ACT_PublishPeriodic();		// pubblicazione dati periodici
+			ACT_PublishOnChange();		// pubblicazione dati al cambiamento
+			ACT_DequeueMessages();		// lettura dei messaggi nei topic sottoscritti
+		
+			(* transition *)
+			IF fbMqttClient.bError THEN
+				eNewstep := E_IOT_Step.NeOrError;
+			ELSE
+				IF NOT bConnect THEN
+					eNewstep := E_IOT_Step.Disconnect;
+				END_IF
+			END_IF;
+			
+			(* exitact *)
+			IF eNewstep <> E_IOT_Step.NoStep THEN				
+				IF eNewstep = E_IOT_Step.NeOrError THEN
+					eErrStep := eStep;
+					nErrID := fbMqttClient.hrErrorCode;
+				END_IF
+			END_IF;
+			
+		(* Unsubscribe *)
+		E_IOT_Step.Unsubscribe:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bCmdTopicSubscribed := FALSE;
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bMqttConnect := TRUE;
+			bCmdTopicSubscribed := NOT fbMqttClient.Unsubscribe(
+				sTopic:=stParams.sCmdSubscribedTopic,				
+			);
+		
+			(* transition *)
+			IF fbMqttClient.bError OR NOT bCmdTopicSubscribed THEN
+				eNewstep := E_IOT_Step.NeOrError;
+			ELSE
+				IF NOT bCmdTopicSubscribed THEN
+					eNewstep := E_IOT_Step.Disconnect;
+				END_IF
+			END_IF;
+			
+			(* exitact *)
+			IF eNewstep <> E_IOT_Step.NoStep THEN
+				IF eNewstep = E_IOT_Step.NeOrError THEN
+					eErrStep := eStep;
+					nErrID := fbMqttClient.hrErrorCode;
+				END_IF
+			END_IF;
+			
+		(* Disconnect *)
+		E_IOT_Step.Disconnect:
+			(* entry action *)
+			IF NOT bEntryact THEN
+				bEntryact := TRUE;
+			END_IF;
+
+			(* body *)
+			bMqttConnect := FALSE;
+		
+			(* transition *)
+			IF fbMqttClient.bError THEN
+				eNewstep := E_IOT_Step.NeOrError;
+			ELSE
+				IF NOT fbMqttClient.bConnected THEN
+					eNewstep := E_IOT_Step.Stop;
+				END_IF
+			END_IF;
+			
+			(* exitact *)
+			IF eNewstep <> E_IOT_Step.NoStep THEN
+				IF eNewstep = E_IOT_Step.NeOrError THEN
+					eErrStep := eStep;
+					nErrID := fbMqttClient.hrErrorCode;
+				END_IF
+			END_IF;			
+		ELSE
+			eNewstep := E_IOT_Step.NeOrError;
+			eErrStep := E_IOT_Step.Unknown;
+			nErrId := -9;			
+	END_CASE;
+	
+	(* tempo di permanenza nello step *)
+	fbTonStep(IN := (eNewstep = E_IOT_Step.NoStep), PT := T#500H);
+	tStepTime := fbTonStep.ET;
+	
+	(* FBs *)
+	// questo metodo Execute va richiamato ad ogni ciclo. Si occupa di
+	// instaurare e mantenere la connessione fino a quando l'ingresso 
+	// passato è a TRUE	
+	fbMqttClient.Execute(bMqttConnect);
+	
+	(* uscite *)
+	fbTpFlmStartCmd(IN:= nFlmCmd = 1, PT:= T#200MS);
+	fbTpFlmStopCmd(IN:= nFlmCmd = 2, PT:= T#200MS);
+	fbTpFlmAckCmd(IN:= nFlmCmd = 3, PT:= T#200MS);
+	bFlmStartCmd := fbTpFlmStartCmd.Q;
+	bFlmStopCmd := fbTpFlmStopCmd.Q;
+	bFlmAckCmd := fbTpFlmAckCmd.Q;
+
+	
+END_IF;
+
+
+]]></ST>
+    </Implementation>
+    <Action Name="ACT_DequeueMessages" Id="{b7d9bb9f-a0de-4e0c-98f3-c35ef28c4d4d}">
+      <Implementation>
+        <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// Questa action si occupa di verificare se ci sono messaggi nei subtopic 
+// sottoscritti ed eventualmente di leggerli e decodificarli. 
+// fbMessageQueue era stata precedentemente passata ad fbMqttClient in questo
+// modo la coda può essere gestita dall'interno di fbMqttClient e anche 
+// all'esterno.
+// A sua volta fbMessage, che è una FB che serve a gestire il singolo messaggio
+// viene passata a fbMessageQueue in modo che il messaggio sia gestibile sia 
+// dall'interno di fbMessageQueue che dall'esterno.
+// Se presente il messaggio viene scodato con fbMessageQueue.Dequeue poi
+// si vanno a leggere il Topic e il payload con fbMessage.GetTopic  e
+// fbMessage.GetPayload. Successivamente si estrapola dal topic completo
+// solo la parte di subtopic che ci interessa per verifcare che corrisponda 
+// al subtopic che abbiamo impostato nei parametri e solo a questo punto, 
+// in base al valore del payload si prendono le azioni corrispondenti impostando
+// la variabile nFlm a tre valori codificati (NB qui sarebbe stata una 
+// buona idea usare una enumerazione... pazienza)
+
+nFlmCmd := 0;
+FOR nDequeueCnt := 0 TO stParams.nDequeueMessagesPerCycle - 1 DO
+	IF fbMessageQueue.nQueuedMessages > 0 THEN
+		IF fbMessageQueue.Dequeue(fbMessage:=fbMessage) THEN
+			fbMessage.GetTopic(
+					pTopic:=ADR(sTopicRcv), 
+					nTopicSize:=SIZEOF(sTopicRcv)
+			);
+			fbMessage.GetPayload(
+				pPayload:=ADR(sPayloadRcv), 
+				nPayloadSize:=SIZEOF(sPayloadRcv),
+				bSetNullTermination:=TRUE
+			);
+			
+			 FindAndDelete(
+				pSrcString:= ADR(sTopicRcv), 
+				pDeleteString:= ADR(stParams.sTopicPrefix), 
+				pDstString:= ADR(sAppo), 
+				nDstSize:= SIZEOF(sAppo)
+			);
+			
+			IF sAppo = stParams.sCmdSubscribedTopic THEN
+				IF sPayloadRcv = 'start' THEN
+					nFlmCmd := 1;
+				ELSIF sPayloadRcv = 'stop' THEN
+					nFlmCmd := 2;
+				ELSIF sPayloadRcv = 'ack' THEN
+					nFlmCmd := 3;
+				END_IF
+			END_IF
+		END_IF
+	END_IF	
+END_FOR]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_PublishOnChange" Id="{95fac071-68c5-4fa3-860d-11c94773d2ea}">
+      <Implementation>
+        <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// Questa Action si occupa della pubblicazione dei dati al cambiamento. Si cicla 
+// tra gli elementi dell'array verificando che il dato sia cambiato per mezzo 
+// di F_IOT_IsValueEqual. Se il dato è cambiato oppure la pubblicazione è 
+// forzata tramite bForceOnChangePublish viene calcolato il payload con 
+// F_IOT_GetPayload che converte il valore del dato in una stringa
+// e lo si pubblica sul topic con il metodo Public di fbMqttClient.
+// L'ingresso eQos indica la qualità richiesta per questa pubblicazione: in
+// questo caso si desidera che la pubblicazione avvenga una e una sola volta, 
+// senza duplicazioni. L'ingresso bRetain a TRUE fa in modo che il broker
+// mantenga questa pubblicazione a disposizione per i client che si potrebbero 
+// collegare in un secondo momento. Questa cosa ha senso visto che i dati 
+// pubblicati al cambiamento potrebbero non cambiare per un tempo lungo e si 
+// lascerebbe il client senza indicazioni per molto.
+
+FOR udi := 0 TO nOnChangePublishSize - 1 DO
+	bIsEqual :=  F_IOT_IsValueEqual(aOnChangePublish[udi].stData.eType, 
+									aOnChangePublish[udi].stData.uValue, 
+									aOnChangePublish[udi].uOldValue);
+	IF bForceOnChangePublish OR NOT bIsEqual THEN
+														
+		F_IOT_GetPayload(aOnChangePublish[udi].stData, ADR(sPayload), SIZEOF(sPayload));
+		fbMqttClient.Publish(
+					sTopic:= aOnChangePublish[udi].stData.sSubtopic, 
+					pPayload:= ADR(sPayload), 
+					nPayloadSize:= LEN2(ADR(sPayload)), 
+					eQoS:= TcIotMqttQos.AtMostOnceDelivery, 
+					bRetain:= TRUE,								 // !
+					bQueue:= FALSE
+		);
+		aOnChangePublish[udi].uOldValue := aOnChangePublish[udi].stData.uValue;
+	END_IF	
+END_FOR
+
+bForceOnChangePublish := FALSE;
+
+
+
+	 
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_PublishPeriodic" Id="{fb79eaf4-3e17-4e3b-9839-b3d6aefd9c9c}">
+      <Implementation>
+        <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// Questa Action si occupa della pubblicazione dei dati periodici. Si cicla 
+// tra gli elementi dell'array distinguendo tra i dati con pubblicazione veloce
+// e quelli a pubblicazione lenta e verificando la presenza del trigger
+// corrispondente. Se le condizioni sono soddisfate si calcola il payload con 
+// F_IOT_GetPayload che converte il valore del dato in una stringa e  lo si 
+// pubblica sul topic con il metodo Public di fbMqttClient.
+// L'ingresso eQos indica la qualità richiesta per questa pubblicazione: in
+// questo caso si desidera che la pubblicazione avvenga una e una sola volta, 
+// senza duplicazioni. L'ingresso bRetain a FALSE fa in modo che il broker non
+// mantenga questa pubblicazione a disposizione per i client che si potrebbero 
+// collegare in un secondo momento. 
+
+FOR udi := 0 TO nPeriodicPublishSize - 1 DO
+	IF fbRtFast.Q AND aPeriodicPublish[udi].eUpdateSpeed = E_IOT_UpdateSpeed.Fast THEN	
+		F_IOT_GetPayload(aPeriodicPublish[udi].stData, ADR(sPayload), SIZEOF(sPayload));
+		fbMqttClient.Publish(
+				sTopic:= aPeriodicPublish[udi].stData.sSubtopic, 
+				pPayload:= ADR(sPayload), 
+				nPayloadSize:= LEN2(ADR(sPayload)), 
+				eQoS:= TcIotMqttQos.AtMostOnceDelivery, 
+				bRetain:= FALSE,
+				bQueue:= FALSE
+		);
+	END_IF;	
+	
+	IF fbRtSlow.Q AND aPeriodicPublish[udi].eUpdateSpeed = E_IOT_UpdateSpeed.Slow THEN	
+		F_IOT_GetPayload(aPeriodicPublish[udi].stData, ADR(sPayload), SIZEOF(sPayload));
+		fbMqttClient.Publish(
+				sTopic:= aPeriodicPublish[udi].stData.sSubtopic, 
+				pPayload:= ADR(sPayload), 
+				nPayloadSize:= LEN2(ADR(sPayload)), 
+				eQoS:= TcIotMqttQos.AtMostOnceDelivery, 
+				bRetain:= FALSE,
+				bQueue:= FALSE
+		);
+	END_IF;
+END_FOR		
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="FB_IOT">
+      <LineId Id="15" Count="2" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="1017" Count="1" />
+      <LineId Id="1020" Count="4" />
+      <LineId Id="1026" Count="2" />
+      <LineId Id="1031" Count="0" />
+      <LineId Id="1036" Count="0" />
+      <LineId Id="1040" Count="3" />
+      <LineId Id="1025" Count="0" />
+      <LineId Id="86" Count="18" />
+      <LineId Id="106" Count="1" />
+      <LineId Id="1014" Count="2" />
+      <LineId Id="551" Count="0" />
+      <LineId Id="553" Count="0" />
+      <LineId Id="583" Count="0" />
+      <LineId Id="585" Count="0" />
+      <LineId Id="109" Count="1" />
+      <LineId Id="114" Count="10" />
+      <LineId Id="132" Count="0" />
+      <LineId Id="877" Count="0" />
+      <LineId Id="879" Count="0" />
+      <LineId Id="134" Count="1" />
+      <LineId Id="382" Count="0" />
+      <LineId Id="1122" Count="0" />
+      <LineId Id="1124" Count="0" />
+      <LineId Id="1123" Count="0" />
+      <LineId Id="1125" Count="1" />
+      <LineId Id="1128" Count="0" />
+      <LineId Id="136" Count="0" />
+      <LineId Id="138" Count="16" />
+      <LineId Id="162" Count="4" />
+      <LineId Id="169" Count="11" />
+      <LineId Id="182" Count="2" />
+      <LineId Id="508" Count="0" />
+      <LineId Id="192" Count="0" />
+      <LineId Id="194" Count="0" />
+      <LineId Id="510" Count="1" />
+      <LineId Id="509" Count="0" />
+      <LineId Id="195" Count="2" />
+      <LineId Id="512" Count="0" />
+      <LineId Id="198" Count="2" />
+      <LineId Id="519" Count="2" />
+      <LineId Id="201" Count="1" />
+      <LineId Id="445" Count="0" />
+      <LineId Id="447" Count="7" />
+      <LineId Id="467" Count="3" />
+      <LineId Id="475" Count="0" />
+      <LineId Id="945" Count="0" />
+      <LineId Id="465" Count="0" />
+      <LineId Id="478" Count="0" />
+      <LineId Id="455" Count="1" />
+      <LineId Id="514" Count="1" />
+      <LineId Id="513" Count="0" />
+      <LineId Id="457" Count="0" />
+      <LineId Id="459" Count="3" />
+      <LineId Id="516" Count="2" />
+      <LineId Id="463" Count="0" />
+      <LineId Id="446" Count="0" />
+      <LineId Id="203" Count="4" />
+      <LineId Id="524" Count="0" />
+      <LineId Id="209" Count="2" />
+      <LineId Id="219" Count="2" />
+      <LineId Id="483" Count="2" />
+      <LineId Id="946" Count="0" />
+      <LineId Id="227" Count="0" />
+      <LineId Id="386" Count="0" />
+      <LineId Id="228" Count="0" />
+      <LineId Id="947" Count="0" />
+      <LineId Id="949" Count="0" />
+      <LineId Id="948" Count="0" />
+      <LineId Id="486" Count="0" />
+      <LineId Id="229" Count="2" />
+      <LineId Id="480" Count="2" />
+      <LineId Id="232" Count="1" />
+      <LineId Id="639" Count="0" />
+      <LineId Id="641" Count="3" />
+      <LineId Id="669" Count="0" />
+      <LineId Id="645" Count="4" />
+      <LineId Id="1050" Count="0" />
+      <LineId Id="1056" Count="0" />
+      <LineId Id="1051" Count="0" />
+      <LineId Id="1055" Count="0" />
+      <LineId Id="1053" Count="0" />
+      <LineId Id="673" Count="0" />
+      <LineId Id="671" Count="0" />
+      <LineId Id="674" Count="0" />
+      <LineId Id="650" Count="15" />
+      <LineId Id="640" Count="0" />
+      <LineId Id="234" Count="4" />
+      <LineId Id="525" Count="0" />
+      <LineId Id="240" Count="3" />
+      <LineId Id="249" Count="0" />
+      <LineId Id="554" Count="0" />
+      <LineId Id="571" Count="0" />
+      <LineId Id="675" Count="0" />
+      <LineId Id="250" Count="1" />
+      <LineId Id="488" Count="5" />
+      <LineId Id="254" Count="3" />
+      <LineId Id="494" Count="2" />
+      <LineId Id="258" Count="1" />
+      <LineId Id="845" Count="0" />
+      <LineId Id="847" Count="11" />
+      <LineId Id="860" Count="16" />
+      <LineId Id="846" Count="0" />
+      <LineId Id="260" Count="8" />
+      <LineId Id="274" Count="2" />
+      <LineId Id="500" Count="5" />
+      <LineId Id="284" Count="3" />
+      <LineId Id="497" Count="2" />
+      <LineId Id="290" Count="1" />
+      <LineId Id="342" Count="8" />
+      <LineId Id="387" Count="1" />
+      <LineId Id="1044" Count="0" />
+      <LineId Id="1048" Count="1" />
+      <LineId Id="390" Count="0" />
+      <LineId Id="771" Count="7" />
+      <LineId Id="389" Count="0" />
+      <LineId Id="351" Count="3" />
+      <LineId Id="80" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_IOT.ACT_DequeueMessages">
+      <LineId Id="20" Count="2" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="59" Count="6" />
+      <LineId Id="67" Count="1" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="69" Count="3" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="76" Count="1" />
+      <LineId Id="58" Count="0" />
+      <LineId Id="35" Count="1" />
+      <LineId Id="11" Count="2" />
+      <LineId Id="51" Count="2" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="54" Count="3" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="38" Count="0" />
+      <LineId Id="46" Count="4" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="26" Count="1" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="37" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_IOT.ACT_PublishOnChange">
+      <LineId Id="2" Count="3" />
+      <LineId Id="50" Count="2" />
+      <LineId Id="62" Count="2" />
+      <LineId Id="56" Count="4" />
+      <LineId Id="6" Count="0" />
+      <LineId Id="65" Count="1" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="46" Count="1" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="42" Count="1" />
+      <LineId Id="32" Count="7" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="10" Count="5" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_IOT.ACT_PublishPeriodic">
+      <LineId Id="2" Count="2" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="56" Count="1" />
+      <LineId Id="63" Count="2" />
+      <LineId Id="76" Count="1" />
+      <LineId Id="71" Count="4" />
+      <LineId Id="7" Count="1" />
+      <LineId Id="24" Count="7" />
+      <LineId Id="16" Count="1" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="46" Count="9" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="20" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

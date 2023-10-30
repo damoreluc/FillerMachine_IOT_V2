@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="F_IOT_GetPayload" Id="{25c91a66-866f-4185-9cca-f0736d05d128}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// Questa funzione calcola il Payload del dato. Il Payload altro non è che la
+// rappresentazione del valore come stringa. Qui si vede l'utilità dell'unione
+// se non si fosse utilizziata l'unione sarebbero state necessarie tre 
+// funzioni molto simili che differivano solamente per il tipo di dato in 
+// ingresso.
+
+
+FUNCTION F_IOT_GetPayload : BOOL
+VAR_INPUT
+	stDataValue : ST_IOT_Data;
+	pPayload : POINTER TO STRING;
+	nSize : UDINT;
+END_VAR
+VAR
+	bRes : BOOL;
+	sAppo1 : STRING(255);	
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+IF stDataValue.eType = E_IOT_DataType.Boolean THEN 
+	sAppo1 := TO_STRING(stDataValue.uValue.b);
+ELSIF stDataValue.eType = E_IOT_DataType.F64 THEN
+	sAppo1 := TO_STRING(stDataValue.uValue.f);
+ELSE
+	sAppo1 := TO_STRING(stDataValue.uValue.n);
+END_IF
+	
+F_IOT_GetPayload := STRNCPY(pPayload, ADR(sAppo1), nSize);
+]]></ST>
+    </Implementation>
+    <LineIds Name="F_IOT_GetPayload">
+      <LineId Id="20" Count="3" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="27" Count="1" />
+      <LineId Id="30" Count="2" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="33" Count="1" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

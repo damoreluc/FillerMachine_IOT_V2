@@ -1,0 +1,74 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_FLM_WriteOutputs" Id="{c5094372-a821-45ab-b2a8-8edb5bc2b172}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+FUNCTION_BLOCK FB_FLM_WriteOutputs
+
+VAR_INPUT
+	stOut :  ST_FLM_Out;
+	stParams : ST_FLM_Params;
+END_VAR
+
+VAR_IN_OUT
+	stRawOut : ST_FLM_RawOut;	
+END_VAR
+
+VAR
+	fbBlink : BLINK;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+(* blinking *)
+fbBlink(ENABLE:= TRUE, TIMELOW:= T#500MS, TIMEHIGH:= T#500MS);
+
+(* lights and horn *)
+
+IF stOut.bBlinkingYellow THEN
+	stRawOut.bYellow := fbBlink.OUT;
+ELSE
+	IF stOut.bFixedYellow THEN
+		stRawOut.bYellow := TRUE;
+	ELSE
+		stRawOut.bYellow := FALSE;
+	END_IF
+END_IF
+
+IF stOut.bBlinkingGreen THEN
+	stRawOut.bGreen := fbBlink.OUT;
+ELSE
+	IF stOut.bFixedGreen THEN
+		stRawOut.bGreen := TRUE;
+	ELSE
+		stRawOut.bGreen := FALSE;
+	END_IF
+END_IF
+
+stRawOut.bHorn := stOut.bHorn;
+
+(* other digitals *)
+stRawOut.bConveyor := stOut.bConveyor;
+stRawOut.bWater := stOut.bWater;
+stRawOut.bMint := stOut.bMint;
+stRawOut.bCorkingVertical := stOut.bCorkingVertical;
+stRawOut.bCorkingRotation := stOut.bCorkingRotation;
+
+(*analogs *)
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_FLM_WriteOutputs">
+      <LineId Id="445" Count="38" />
+      <LineId Id="308" Count="0" />
+      <LineId Id="503" Count="0" />
+      <LineId Id="502" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

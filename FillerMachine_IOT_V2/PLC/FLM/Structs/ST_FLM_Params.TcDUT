@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="ST_FLM_Params" Id="{c498caa1-abfe-42d9-80ee-3f4baf3ac6ff}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+TYPE ST_FLM_Params :
+STRUCT
+	nFillingCycles : UINT := 3;				// cicli di riempimento
+	tWaterFillingTime : TIME := T#1S;		// durata riempimento acqua per ciclo
+	tMintFillingTime : TIME := T#500MS;		// durata riempimento menta per ciclo
+	fWaterMaxLevel : REAL := 1000.0;		// livello massimo letto dal sensore (acqua)
+	fMintMaxLevel : REAL := 200.0;			// livello massimo letto dal sensore (menta)
+	stCorking : ST_FLM_CorkingParams;		// parametri dispositivo di tappatura
+END_STRUCT
+END_TYPE
+
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

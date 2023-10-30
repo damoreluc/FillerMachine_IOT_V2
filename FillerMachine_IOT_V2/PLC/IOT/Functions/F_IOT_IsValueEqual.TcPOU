@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="F_IOT_IsValueEqual" Id="{7ae83741-be1d-41e7-bf07-285178dbdb1b}" SpecialFunc="None">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+// Questa funzione confronta il valore attuale del dato con il suo valore 
+// precedente.  Anche qui si vede l'utilità dell'unione: se non si fosse 
+// utilizzata l'unione sarebbero state necessarie tre  funzioni molto simili 
+// che differivano solamente per il tipo di dato in ingresso.
+
+FUNCTION F_IOT_IsValueEqual : BOOL
+VAR_INPUT
+	eType : E_IOT_DataType;
+	uVal1 : U_IOT_DataValue;
+	uVal2 : U_IOT_DataValue;	
+END_VAR
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+IF eType = E_IOT_DataType.Boolean THEN
+	F_IOT_IsValueEqual := uVal1.b = uVal2.b;
+ELSIF eType = E_IOT_DataType.F64 THEN
+	F_IOT_IsValueEqual := uVal1.f = uVal2.f;
+ELSIF eType = E_IOT_DataType.I32 THEN
+F_IOT_IsValueEqual := uVal1.n = uVal2.n;
+ELSE
+	F_IOT_IsValueEqual := FALSE;	
+END_IF
+	 ]]></ST>
+    </Implementation>
+    <LineIds Name="F_IOT_IsValueEqual">
+      <LineId Id="16" Count="1" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="26" Count="1" />
+      <LineId Id="15" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

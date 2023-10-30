@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="E_FLM_Step" Id="{bf133096-f7e7-42b3-8337-d4860b98b421}">
+    <Declaration><![CDATA[(* -----------------------------------------------------------------------------
+| This sample has been supplied by Beckhoff As-Is and is intended only as an   |
+| example implementation. Functionality is not guaranteed.                     |
+----------------------------------------------------------------------------- *)
+
+{attribute 'qualified_only'}
+{attribute 'strict'}
+{attribute 'to_string'}
+
+TYPE E_FLM_Step :
+(
+	(* special steps *)
+	NoStep := -32767,		// nessuno step
+	Unknown := -32000,		// step sconosciuto
+	
+	(* Error steps *)
+	NeOrError := -990,		// non abilitata o in errore
+	Reset := -980,			// azzeramento errori
+
+	(* Stop *)
+	Stop := 0,				// stop
+	
+	(* Cycle *)
+	Feeding := 110,			// avanzamento
+	WaterFilling := 120,	// riempimento acqua
+	MintFilling := 130,		// riempimento menta
+	Corking := 150,			// tappatura	
+		
+	(* Stopping *)
+	Stopping := 900
+	
+);
+END_TYPE
+
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>
